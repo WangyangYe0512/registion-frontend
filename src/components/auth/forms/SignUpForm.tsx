@@ -7,21 +7,28 @@ import { AuthInput } from "../elements/AuthInput";
 import { AuthButton } from "../elements/AuthButton";
 import { AuthLink } from "../elements/AuthLink";
 import { AuthErrorMessage } from "../elements/AuthErrorMessage";
-import { AuthFormContainer } from "../elements/AuthFormContainer";
+import { PasswordInput } from "../elements/PasswordInput";
+// import { AuthFormContainer } from "../elements/AuthFormContainer"; // Removed due to layout redesign - replaced with split-screen layout
+import { validateEmail, validatePassword, validateName, validatePasswordConfirmation } from "@/lib/utils/validation";
 
 export const SignUpForm: React.FC = () => {
   const router = useRouter();
   const { register, isLoading, error, clearError } = useAuth();
 
   const [formData, setFormData] = useState({
-    name: "",
+    firstName: "",
+    lastName: "",
     email: "",
     password: "",
+    confirmPassword: "",
   });
 
   const [formErrors, setFormErrors] = useState({
+    firstName: "",
+    lastName: "",
     email: "",
     password: "",
+    confirmPassword: "",
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -41,28 +48,79 @@ export const SignUpForm: React.FC = () => {
 
   const validateForm = (): boolean => {
     let isValid = true;
-    const newErrors = { email: "", password: "" };
+    const newErrors = {
+      firstName: "",
+      lastName: "",
+      email: "",
+      password: "",
+      confirmPassword: ""
+    };
+
+    // First name validation
+    const firstNameValidation = validateName(formData.firstName, "First name");
+    if (!firstNameValidation.isValid) {
+      newErrors.firstName = firstNameValidation.message || "First name is required";
+      isValid = false;
+    }
+
+    // Last name validation
+    const lastNameValidation = validateName(formData.lastName, "Last name");
+    if (!lastNameValidation.isValid) {
+      newErrors.lastName = lastNameValidation.message || "Last name is required";
+      isValid = false;
+    }
 
     // Email validation
-    if (!formData.email) {
-      newErrors.email = "Email is required";
-      isValid = false;
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = "Please enter a valid email address";
+    const emailValidation = validateEmail(formData.email);
+    if (!emailValidation.isValid) {
+      newErrors.email = emailValidation.message || "Invalid email";
       isValid = false;
     }
 
     // Password validation
-    if (!formData.password) {
-      newErrors.password = "Password is required";
+    const passwordValidation = validatePassword(formData.password);
+    if (!passwordValidation.isValid) {
+      newErrors.password = passwordValidation.message || "Invalid password";
       isValid = false;
-    } else if (formData.password.length < 6) {
-      newErrors.password = "Password must be at least 6 characters";
+    }
+
+    // Confirm password validation
+    const confirmPasswordValidation = validatePasswordConfirmation(
+      formData.password,
+      formData.confirmPassword
+    );
+    if (!confirmPasswordValidation.isValid) {
+      newErrors.confirmPassword = confirmPasswordValidation.message || "Passwords do not match";
       isValid = false;
     }
 
     setFormErrors(newErrors);
     return isValid;
+  };
+
+  const handleCancel = () => {
+    // Clear all form fields
+    setFormData({
+      firstName: "",
+      lastName: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+    });
+
+    // Clear form errors
+    setFormErrors({
+      firstName: "",
+      lastName: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+    });
+
+    // Clear global error
+    if (error) {
+      clearError();
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -84,61 +142,120 @@ export const SignUpForm: React.FC = () => {
   };
 
   return (
-    <div className="relative w-full max-w-[1005px] h-[641px]">
-      {/* Background Image */}
-      <div className="absolute left-0 top-0 w-[673px] h-[471px] rounded-[100px] shadow-[8px_10px_10px_3px_rgba(0,0,0,0.25)] overflow-hidden">
-        <div className="w-full h-full bg-[url('/nightclub-bg.png')] bg-cover bg-center bg-no-repeat"></div>
+    <div className="flex w-full max-w-6xl mx-auto bg-white rounded-lg overflow-hidden min-h-[700px]">
+      {/* Left side - Gray placeholder for illustration */}
+      <div className="flex-1 placeholder-area flex items-center justify-center">
+        <div className="text-gray-500 text-center">
+          <div className="text-4xl mb-2">🎨</div>
+          <p className="text-sm">Illustration placeholder</p>
+        </div>
       </div>
 
-      {/* Form Container */}
-      <AuthFormContainer
-        title={
-          <>
-            <h1 className="auth-title text-[42px]">Sign Up to</h1>
-            <h2 className="auth-title text-[42px] underline">The Night Club</h2>
-          </>
-        }
-      >
-        <form onSubmit={handleSubmit} className="w-full space-y-4">
-          {/* Email Input */}
-          <AuthInput
-            label="E-mail"
-            type="email"
-            name="email"
-            placeholder="example@service.com"
-            value={formData.email}
-            onChange={handleChange}
-            error={formErrors.email}
-          />
+      {/* Right side - Form */}
+      <div className="flex-1 p-12 flex flex-col justify-center">
+        <div className="max-w-md mx-auto w-full">
+          {/* Title */}
+          <h1 className="auth-title text-[32px] mb-2">Create your account</h1>
 
-          {/* Password Input */}
-          <AuthInput
-            label="Password"
-            type="password"
-            name="password"
-            placeholder="****************"
-            value={formData.password}
-            onChange={handleChange}
-            error={formErrors.password}
-          />
-
-          {/* Error Message */}
-          <AuthErrorMessage message={error} />
-
-          {/* Sign Up Button */}
-          <AuthButton
-            label="SIGN UP"
-            isLoading={isLoading}
-            disabled={isLoading}
-          />
-
-          {/* Login Link */}
+          {/* Login link */}
           <AuthLink
-            text="Already have an account?"
+            regularText="Have an account?"
+            linkText="Log in now"
             href="/login"
           />
-        </form>
-      </AuthFormContainer>
+
+          <form onSubmit={handleSubmit} className="mt-8 space-y-6">
+            {/* Email Input */}
+            <AuthInput
+              label="Email Address"
+              type="email"
+              name="email"
+              placeholder=""
+              value={formData.email}
+              onChange={handleChange}
+              error={formErrors.email}
+            />
+
+            {/* First Name Input */}
+            <AuthInput
+              label="First name"
+              type="text"
+              name="firstName"
+              placeholder=""
+              value={formData.firstName}
+              onChange={handleChange}
+              error={formErrors.firstName}
+            />
+
+            {/* Last Name Input */}
+            <AuthInput
+              label="Last name"
+              type="text"
+              name="lastName"
+              placeholder=""
+              value={formData.lastName}
+              onChange={handleChange}
+              error={formErrors.lastName}
+            />
+
+            {/* Password Input */}
+            <div className="space-y-2 w-full">
+              <PasswordInput
+                label="Password"
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                error={formErrors.password}
+                placeholder=""
+              />
+
+              {/* Password Requirements */}
+              <div className="password-requirements text-xs text-gray-600 mt-2 space-y-1">
+                <div className="flex items-center space-x-2">
+                  <span className={`text-xs ${formData.password.length >= 8 ? 'text-green-600' : 'text-gray-400'}`}>✓</span>
+                  <span>Must be at least 8 characters</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span className={`text-xs ${/[A-Z]/.test(formData.password) && /[0-9]/.test(formData.password) && /[!@#$%^&*(),.?":{}|<>]/.test(formData.password) ? 'text-green-600' : 'text-gray-400'}`}>✓</span>
+                  <span>Contain at least one uppercase, one number and one special character</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Confirm Password Input */}
+            <PasswordInput
+              label="Confirm password"
+              name="confirmPassword"
+              value={formData.confirmPassword}
+              onChange={handleChange}
+              error={formErrors.confirmPassword}
+              placeholder=""
+            />
+
+            {/* Error Message */}
+            <AuthErrorMessage message={error} />
+
+            {/* Buttons */}
+            <div className="flex space-x-4 pt-4">
+              <AuthButton
+                label="Cancel"
+                type="button"
+                variant="secondary"
+                onClick={handleCancel}
+                className="flex-1"
+              />
+              <AuthButton
+                label="Submit"
+                type="submit"
+                variant="primary"
+                isLoading={isLoading}
+                disabled={isLoading}
+                className="flex-1"
+              />
+            </div>
+          </form>
+        </div>
+      </div>
     </div>
   );
 };
